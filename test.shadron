@@ -1,5 +1,6 @@
 #include <math_constants>
 #include <debug>
+#include <dither>
 #include <shapes>
 
 image Gravestone = file("gravestone.png") :filter(nearest);
@@ -30,38 +31,18 @@ glsl bool should_print_mouse_z(vec2 position) {
 };
 
 glsl vec4 drawRectAndPrintMouseCoords(vec2 position) {
-    // draw a black rectangle
-    vec2 left_bottom = vec2(0, 0);
-    vec2 top_right = vec2(0.5, 0.5);
-    bool in_rect = rectangle(position, left_bottom, top_right) == 1;
-    if (in_rect) { return BLACK; }
-
-    // ugly print mouse pos
-    // float mouse_x = float(shadron_Mouse.x);
-    // ivec2 test_pos = ivec2(shadron_Dimensions*position);
-    // bool should_print = printValue(mouse_x, test_pos/2 - ivec2(80.5, 0));
-    // if (should_print) { return BLUE; };
-    //
-    // float mouse_y = float(shadron_Mouse.y);
-    // test_pos = ivec2(shadron_Dimensions*position);
-    // should_print = printValue(mouse_y, test_pos/2 - ivec2(80.5, 20));
-    // if (should_print) { return BLUE; };
-
-    // float mouse_z = float(shadron_Mouse.z);
-    // test_pos = ivec2(shadron_Dimensions*position);
-    // should_print = printValue(mouse_z, test_pos/2 - ivec2(80.5, 40));
-    // if (should_print) { return BLUE; };
+    ivec2 dim_pos = ivec2(shadron_Dimensions*position);
 
     //pretty print mouse pos
+    float val = shadron_Time;
     if (should_print_mouse_x(position)) { return BLUE; }
-    if (should_print_mouse_y(position)) { return BLUE; }
-    if (should_print_mouse_z(position)) { return BLUE; }
+    if (should_print_at_offset(position, shadron_DeltaTime, ivec2(80, 50))) { return BLUE; }
 
 
-    // printValue(123.0f, ivec2(0, 0));
     vec4 sample = texture(Gravestone, position);
+    float dithered = dither<4>(ivec2(dim_pos));
     if (sample.a != 0) {
-        sample = sample*(intensity);
+        sample*= dithered;
     };
     return sample;
 }
@@ -70,4 +51,4 @@ const int sides = 36 * 16;
 const ivec2 SIZE = vec2(sides, sides);
 
 // The generated cubemap
-image Test = glsl(drawRectAndPrintMouseCoords, SIZE);
+animation Test = glsl(drawRectAndPrintMouseCoords, SIZE);
