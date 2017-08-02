@@ -1,22 +1,73 @@
 #include <math_constants>
+#include <debug>
+#include <shapes>
 
 image Gravestone = file("gravestone.png") :filter(nearest);
 
 
+parameter float intensity = 0.3 : range(0.3, 0.9);
+
+
 const vec4 WHITE = vec4( 1, 1, 1, 1);
 const vec4 BLACK = vec4( 0, 0, 0, 1);
+const vec4 BLUE = vec4( 0, 0, 1, 1);
 
-glsl vec4 sampleMyImage(vec2 position) {
-    vec2 my_pos = position;
-    if (my_pos.x > 0.5) { my_pos.x = mod(my_pos.x, 0.1); }
-    if (my_pos.y > 0.5) { my_pos.y = mod(my_pos.y, 0.1); }
-    // vec4 sample = vec4(my_pos.x, my_pos.y, 1, 1.0f);
+glsl bool should_print_at_offset(vec2 position, float val, ivec2 offset) {
+    ivec2 test_pos = ivec2(shadron_Dimensions*position);
+    return printValue(val, test_pos/2 - offset);
+};
+
+glsl bool should_print_mouse_x(vec2 position) {
+    return should_print_at_offset( position, shadron_Mouse.x, ivec2(80.5, 0));
+};
+
+glsl bool should_print_mouse_y(vec2 position) {
+    return should_print_at_offset( position, shadron_Mouse.y, ivec2(80.5, 25));
+};
+
+glsl bool should_print_mouse_z(vec2 position) {
+    return should_print_at_offset( position, shadron_Mouse.z, ivec2(80.5, 50));
+};
+
+glsl vec4 drawRectAndPrintMouseCoords(vec2 position) {
+    // draw a black rectangle
+    vec2 left_bottom = vec2(0, 0);
+    vec2 top_right = vec2(0.5, 0.5);
+    bool in_rect = rectangle(position, left_bottom, top_right) == 1;
+    if (in_rect) { return BLACK; }
+
+    // ugly print mouse pos
+    // float mouse_x = float(shadron_Mouse.x);
+    // ivec2 test_pos = ivec2(shadron_Dimensions*position);
+    // bool should_print = printValue(mouse_x, test_pos/2 - ivec2(80.5, 0));
+    // if (should_print) { return BLUE; };
+    //
+    // float mouse_y = float(shadron_Mouse.y);
+    // test_pos = ivec2(shadron_Dimensions*position);
+    // should_print = printValue(mouse_y, test_pos/2 - ivec2(80.5, 20));
+    // if (should_print) { return BLUE; };
+
+    // float mouse_z = float(shadron_Mouse.z);
+    // test_pos = ivec2(shadron_Dimensions*position);
+    // should_print = printValue(mouse_z, test_pos/2 - ivec2(80.5, 40));
+    // if (should_print) { return BLUE; };
+
+    //pretty print mouse pos
+    if (should_print_mouse_x(position)) { return BLUE; }
+    if (should_print_mouse_y(position)) { return BLUE; }
+    if (should_print_mouse_z(position)) { return BLUE; }
+
+
+    // printValue(123.0f, ivec2(0, 0));
     vec4 sample = texture(Gravestone, position);
+    if (sample.a != 0) {
+        sample = sample*(intensity);
+    };
     return sample;
 }
 
-const int sides = 50 * 16;
+const int sides = 36 * 16;
 const ivec2 SIZE = vec2(sides, sides);
 
 // The generated cubemap
-image Test = glsl(sampleMyImage, SIZE);
+image Test = glsl(drawRectAndPrintMouseCoords, SIZE);
