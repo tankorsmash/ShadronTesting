@@ -1,0 +1,22 @@
+#include <math_constants>
+
+image Gravestone = file("gravestone.png") :filter(nearest);
+
+
+const vec4 WHITE = vec4( 1, 1, 1, 1);
+const vec4 BLACK = vec4( 0, 0, 0, 1);
+
+glsl vec4 sampleMyImage(vec2 position) {
+    vec2 my_pos = position;
+    if (my_pos.x > 0.5) { my_pos.x = mod(my_pos.x, 0.1); }
+    if (my_pos.y > 0.5) { my_pos.y = mod(my_pos.y, 0.1); }
+    // vec4 sample = vec4(my_pos.x, my_pos.y, 1, 1.0f);
+    vec4 sample = texture(Gravestone, position);
+    return sample;
+}
+
+const int sides = 50 * 16;
+const ivec2 SIZE = vec2(sides, sides);
+
+// The generated cubemap
+image Test = glsl(sampleMyImage, SIZE);
