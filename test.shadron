@@ -23,10 +23,14 @@ const vec4 WHITE = vec4( 1, 1, 1, 1);
 const vec4 BLACK = vec4( 0, 0, 0, 1);
 const vec4 BLUE = vec4( 0, 0, 1, 1);
 
+const vec4 NULL = vec4(123.456,123.456,123.456,123.456);
 
-const int sides = 36 * 16;
+
+const int sides = 24 * 16;
 const ivec2 IMG_SIZE = ivec2(16, 16);
 const ivec2 SIZE = vec2(sides, sides);
+const int width = SIZE.x;
+const int height = SIZE.y;
 
 glsl bool should_print_at_offset(vec2 position, float val, ivec2 offset) {
     ivec2 test_pos = ivec2(shadron_Dimensions*position);
@@ -61,6 +65,21 @@ glsl vec2 my_denorm(vec2 normed, vec2 min, vec2 max) {
     return normed * (max - min) + min;
 };
 
+glsl vec4 blur5(sampler2D image, vec2 uv, vec2 resolution, vec2 direction) {
+    vec4 color = vec4(0.0);
+    vec2 off1 = vec2(1.3333333333333333) * direction;
+    color += texture2D(image, uv) * 0.29411764705882354;
+    color += texture2D(image, uv + (off1 / resolution)) * 0.35294117647058826;
+    color += texture2D(image, uv - (off1 / resolution)) * 0.35294117647058826;
+    return color;
+}
+
+glsl vec4 draw_inline(vec2 position) {
+    vec4 color = texture(Gravestone, 1-position);
+    if (color.a == 0) { return NULL; }
+    else return color;
+};
+
 glsl vec4 drawRectAndPrintMouseCoords(vec2 position) {
     if (should_print_mouse(position)) { return BLUE; }
 
@@ -75,12 +94,17 @@ glsl vec4 drawRectAndPrintMouseCoords(vec2 position) {
 
         pos = my_denorm(pos, ZERO2, ONE2);
         pos = my_norm(pos, bl, tr);
-        vec4 result = texture(Gravestone, pos);
-        return result;
+        vec4 result = draw_inline(pos);
+        if (result != NULL) return result;
     };
 
     return texture(Gravestone, position);
 }
 
+glsl vec4 blur_background(vec2 position) {
+    return blur5(Gravestone, position, vec2(sides,sides), vec2(0.5, 0.5));
+};
+
 // The generated cubemap
 image Test = glsl(drawRectAndPrintMouseCoords, SIZE);
+image BlurredBackground = glsl(blur_background, SIZE);
