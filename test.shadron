@@ -6,9 +6,7 @@
 #include <blending>
 #include <shapes>
 
-image Gravestone = file("gravestone.png") :filter(nearest), map(clamp);
-
-parameter float intensity = 0.3 : range(0.0, 1.0);
+image Spritesheet = file("master_ui.png") :filter(nearest), map(clamp);
 
 const vec2 ZERO2 = vec2(0, 0);
 const vec3 ZERO3 = vec3(0, 0, 0);
@@ -27,9 +25,19 @@ const vec4 NULL = vec4(123.456,123.456,123.456,123.456);
 
 const int sides = 24 * 16;
 const ivec2 IMG_SIZE = ivec2(16, 16);
-const ivec2 SIZE = vec2(sides, sides);
+const ivec2 SIZE = vec2(1024, 1024);
 const int width = SIZE.x;
 const int height = SIZE.y;
+
+glsl vec2 SHEET_SIZE = vec2(1024.0f, 1024.0f);
+
+//// gravestone
+glsl vec2 SPRITE_ORIGIN = vec2(274.0f,307.0f);
+glsl vec2 SPRITE_SIZE = vec2(89.0f, 93.0f);
+
+//// forest
+// glsl vec2 SPRITE_ORIGIN = vec2(758.0f, 409.0f);
+// glsl vec2 SPRITE_SIZE = vec2(80.0f, 100.0f);
 
 
 glsl vec4 blur5(sampler2D image, vec2 uv, vec2 resolution, vec2 direction) {
@@ -40,41 +48,11 @@ glsl vec4 blur5(sampler2D image, vec2 uv, vec2 resolution, vec2 direction) {
     color += texture2D(image, uv - (off1 / resolution)) * 0.35294117647058826;
     return color;
 }
-glsl vec4 blur_background(vec2 position) {
-    float resolution = 128;
-    vec4 blurred = blur5(Gravestone, position, vec2(resolution, resolution), vec2(1, 1));
-    if (blurred.a != 0) {
-        blurred = blendAdditive(blurred, BLUE);
-    };
-    return blurred;
-};
-image BlurredBackground = glsl(blur_background, SIZE);
-
 
 
 glsl bool should_print_at_offset(vec2 position, float val, ivec2 offset) {
     ivec2 test_pos = ivec2(shadron_Dimensions*position);
     return printValue(val, test_pos/2 - offset);
-};
-
-glsl bool should_print_mouse_x(vec2 position) {
-    return should_print_at_offset( position, shadron_Mouse.x, ivec2(80.5, 0));
-};
-
-glsl bool should_print_mouse_y(vec2 position) {
-    return should_print_at_offset( position, shadron_Mouse.y, ivec2(80.5, 25));
-};
-
-glsl bool should_print_mouse_z(vec2 position) {
-    return should_print_at_offset( position, shadron_Mouse.z, ivec2(80.5, 50));
-};
-
-glsl bool should_print_mouse(vec2 position) {
-    if ( should_print_mouse_x(position) ) { return true; }
-    if ( should_print_mouse_y(position) ) { return true; }
-    // if ( should_print_mouse_z(position) ) { return true; }
-
-    return false;
 };
 
 glsl vec2 my_norm(vec2 val, vec2 min, vec2 max) {
@@ -86,40 +64,22 @@ glsl vec2 my_denorm(vec2 normed, vec2 min, vec2 max) {
 };
 
 
-glsl vec4 draw_inline(vec2 position) {
-    vec4 color = texture(Gravestone, 1-position);
-    if (color.a == 0) { return NULL; }
-    else return color;
-};
+glsl vec4 draw_spritesheet(vec2 position) {
+    // return texture(Spritesheet, position);
 
-glsl vec4 drawRectAndPrintMouseCoords(vec2 position) {
-    if (should_print_mouse(position)) { return BLUE; }
-
-    ivec2 dim_pos = ivec2(shadron_Dimensions*position);
-    vec2 origin = vec2(0.3, 0.2);
-    float size = 0.3f;
-    vec2 bl = origin;
-    vec2 tr = origin + vec2(size, size*2);
-    if (rectangle(position, bl, tr) == 1)
-    {
-        vec2 pos = position;
-
-        pos = my_denorm(pos, ZERO2, ONE2);
-        pos = my_norm(pos, bl, tr);
-        vec4 result = draw_inline(pos);
-        if (result != NULL) return result;
+    vec2 adjusted = position;
+    adjusted = my_denorm(adjusted, ZERO2, SHEET_SIZE);
+    vec2 in_rect = vec2(adjusted.x, SHEET_SIZE.y -adjusted.y);
+    if (rectangle(in_rect, SPRITE_ORIGIN, SPRITE_ORIGIN+SPRITE_SIZE) == 1) {
+        vec4 base_tex = texture(Spritesheet, position);
+        return base_tex;
+    } else  {
+        return BLUE;
     };
 
-    return texture(Gravestone, position);
-}
-
-glsl vec4 simple_draw(vec2 position) {
-    vec4 base_tex = texture(Gravestone, position);
-    if (base_tex.a == 0) {
-        return texture(BlurredBackground, position);
-    }
+    vec4 base_tex = texture(Spritesheet, adjusted);
     return base_tex;
 };
 
 // The generated cubemap
-image Test = glsl(simple_draw, SIZE);
+image GravestoneInSheet = glsl(draw_spritesheet, SIZE);
