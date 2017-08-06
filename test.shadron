@@ -64,22 +64,93 @@ glsl vec2 my_denorm(vec2 normed, vec2 min, vec2 max) {
 };
 
 
+glsl float RawDistToLine(vec2 pt1, vec2 pt2, vec2 testPt)
+{
+  vec2 lineDir = pt2 - pt1;
+  vec2 perpDir = vec2(lineDir.y, -lineDir.x);
+  vec2 dirToPt1 = pt1 - testPt;
+  return dot(normalize(perpDir), dirToPt1);
+}
+glsl float DistToLine(vec2 pt1, vec2 pt2, vec2 testPt)
+{
+  return abs(RawDistToLine(pt1, pt2, testPt));
+}
+
+glsl bool between(float input, float lower, float upper) {
+    return input > lower && input < upper;
+};
+
+glsl vec2 global_norm(vec2 input) {
+    return my_norm(input, ZERO2, ZERO2+SHEET_SIZE);
+};
+
+glsl vec2 global_denorm(vec2 input) {
+    return my_denorm(input, ZERO2, ZERO2+SHEET_SIZE);
+};
+
+glsl vec2 local_norm(vec2 input) {
+    return my_norm(input, SPRITE_ORIGIN, SPRITE_ORIGIN+SPRITE_SIZE);
+};
+
+glsl vec2 local_denorm(vec2 input) {
+    return my_denorm(input, SPRITE_ORIGIN, SPRITE_ORIGIN+SPRITE_SIZE);
+};
+
+// parameter float CC_Time = 0.3;
+
+glsl vec4 do_glimmer(vec2 position) {
+    vec4 color = texture(Spritesheet, position);
+    float CC_Time = shadron_Time * 0.1;
+
+
+    float speed = 100.0f;
+    float delay = 20.0f;
+    float offset_time = mod(CC_Time*speed, delay);
+
+    vec2 origin = vec2(0., 0.);
+    origin.y += offset_time;
+    float dist = 100.;
+
+    vec2 line_origin = local_denorm(origin);
+    vec2 line_end = local_denorm(origin+vec2(dist, dist));
+
+    float dist_to_line = RawDistToLine(
+        global_norm(line_origin),
+        global_norm(line_end),
+        position
+    );
+
+    float thickness = 0.015;
+    if (between(dist_to_line, 0., thickness) && color.a != 0.0) {
+        return vec4(1,1,1,1);
+    } else {
+        return color;
+    }
+};
+
 glsl vec4 draw_spritesheet(vec2 position) {
     // return texture(Spritesheet, position);
 
+    return do_glimmer(position);
+
+    vec4 base_tex;
     vec2 adjusted = position;
     adjusted = my_denorm(adjusted, ZERO2, SHEET_SIZE);
     vec2 in_rect = vec2(adjusted.x, SHEET_SIZE.y -adjusted.y);
     if (rectangle(in_rect, SPRITE_ORIGIN, SPRITE_ORIGIN+SPRITE_SIZE) == 1) {
-        vec4 base_tex = texture(Spritesheet, position);
-        return base_tex;
+        vec2 normed = my_denorm(position, SPRITE_ORIGIN, SPRITE_ORIGIN+SPRITE_SIZE);
+        if (lineDistance(normed, ZERO2, vec2(10, 10), 11) > 0.7f) {
+            // return BLACK;
+        };
+        base_tex = texture(Spritesheet, position);
+        // return base_tex;
     } else  {
-        return BLUE;
+        return vec4(1,1,1,1);
     };
 
-    vec4 base_tex = texture(Spritesheet, adjusted);
+    base_tex = texture(Spritesheet, adjusted);
     return base_tex;
 };
 
 // The generated cubemap
-image GravestoneInSheet = glsl(draw_spritesheet, SIZE);
+animation GravestoneInSheet = glsl(draw_spritesheet, SIZE);
