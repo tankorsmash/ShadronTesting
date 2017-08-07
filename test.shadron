@@ -7,6 +7,7 @@
 #include <shapes>
 
 image Spritesheet = file("master_ui.png") :filter(nearest), map(clamp);
+image Grain = file("grain.png") :filter(nearest), map(clamp);
 
 const vec2 ZERO2 = vec2(0, 0);
 const vec3 ZERO3 = vec3(0, 0, 0);
@@ -30,10 +31,13 @@ const int width = SIZE.x;
 const int height = SIZE.y;
 
 glsl vec2 SHEET_SIZE = vec2(1024.0f, 1024.0f);
+const vec2 GRAIN_SHEET_SIZE = vec2(16., 16.);
 
 //// gravestone
 glsl vec2 SPRITE_ORIGIN = vec2(274.0f,307.0f);
 glsl vec2 SPRITE_SIZE = vec2(89.0f, 93.0f);
+glsl vec2 GRAIN_SPRITE_ORIGIN = vec2(0., 0.);
+glsl vec2 GRAIN_SPRITE_SIZE = vec2(16., 16.);
 
 //// forest
 // glsl vec2 SPRITE_ORIGIN = vec2(758.0f, 409.0f);
@@ -96,7 +100,15 @@ glsl vec2 local_denorm(vec2 input) {
     return my_denorm(input, SPRITE_ORIGIN, SPRITE_ORIGIN+SPRITE_SIZE);
 };
 
-// parameter float CC_Time = 0.3;
+glsl vec2 local_norm_grain(vec2 input) {
+    return my_norm(input, GRAIN_SPRITE_ORIGIN, GRAIN_SPRITE_ORIGIN+GRAIN_SPRITE_SIZE);
+};
+
+glsl vec2 local_denorm_grain(vec2 input) {
+    return my_denorm(input, GRAIN_SPRITE_ORIGIN, GRAIN_SPRITE_ORIGIN+GRAIN_SPRITE_SIZE);
+};
+
+parameter float OFFSET = 0.3;
 
 glsl vec4 do_glimmer(vec2 position) {
     vec4 color = texture(Spritesheet, position);
@@ -128,6 +140,43 @@ glsl vec4 do_glimmer(vec2 position) {
     }
 };
 
+glsl vec4 do_glimmer_grain(vec2 position) {
+    vec4 color = texture(Grain, position);
+    float CC_Time = shadron_Time * 0.1;
+
+
+    float speed = 100.0f;
+    float delay = 20.0f;
+    float offset_time = mod(CC_Time*speed, delay);
+
+    vec2 origin = vec2(0., 0.);
+    origin.y += offset_time;
+    // origin.y += OFFSET;
+    float dist = 100.;
+
+    vec2 end = origin+vec2(dist, dist);
+    vec2 line_origin = local_denorm_grain(origin);
+    vec2 line_end = local_denorm_grain(end);
+
+    float thickness = 0.015;
+    float dist_to_line = line(
+        position,
+        line_origin,
+        line_end,
+        thickness
+    );
+
+    if (dist_to_line == 1 && color.a != 0.0) {
+        return vec4(1,0,1,1);
+    } else {
+        return color;
+    }
+};
+
+glsl vec4 draw_grain(vec2 position) {
+    return do_glimmer_grain(position);
+};
+
 glsl vec4 draw_spritesheet(vec2 position) {
     // return texture(Spritesheet, position);
 
@@ -154,3 +203,4 @@ glsl vec4 draw_spritesheet(vec2 position) {
 
 // The generated cubemap
 animation GravestoneInSheet = glsl(draw_spritesheet, SIZE);
+animation GrainInSheet = glsl(draw_grain, GRAIN_SHEET_SIZE*40);
